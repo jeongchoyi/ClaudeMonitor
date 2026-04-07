@@ -23,27 +23,11 @@ Claude Code 세션을 모니터링하는 macOS 오버레이 앱.
 
 ## Install
 
-### 소스에서 빌드
-
 ```bash
 git clone https://github.com/jeongchoyi/ClaudeMonitor.git
 cd ClaudeMonitor
 swift build -c release
-```
-
-빌드된 바이너리 실행:
-```bash
 .build/release/ClaudeMonitor &
-```
-
-### 릴리즈 바이너리 다운로드
-
-[Releases](https://github.com/jeongchoyi/ClaudeMonitor/releases) 페이지에서 최신 바이너리를 다운로드하거나:
-
-```bash
-# dist/ 에 포함된 바이너리 사용
-tar -xzf dist/ClaudeMonitor-macos-arm64.tar.gz
-./ClaudeMonitor &
 ```
 
 > 로그인 시 자동 실행하려면 `System Settings > General > Login Items`에 추가하세요.

@@ -17,8 +17,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var configStore: ConfigStore!
     private var configWindow: NSWindow?
 
-    private var debounceTimer: Timer?
-    private var pendingNotification: SessionNotification?
     private var bubbleShownAt: Date?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -32,6 +30,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupContextMenu()
         setupServer()
         startFocusMonitor()
+        startSessionCleanup()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             NSApp.setActivationPolicy(.accessory)
@@ -117,43 +116,41 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     self?.handleNotification(notification)
                 }
             },
-            onRegister: { [weak self] name, cwd, gifPath in
+            onRegister: { [weak self] name, cwd, gifPath, isAuto in
                 DispatchQueue.main.async {
-                    self?.registerSession(name: name, cwd: cwd, gifPath: gifPath)
+                    self?.registerSession(name: name, cwd: cwd, gifPath: gifPath, isAuto: isAuto)
                 }
             }
         )
     }
 
-    private func registerSession(name: String, cwd: String, gifPath: String) {
-        guard !configStore.sessions.contains(where: { $0.cwdPattern == cwd }) else { return }
+    private func registerSession(name: String, cwd: String, gifPath: String, isAuto: Bool) {
+        let exists = configStore.sessions.contains {
+            $0.cwdPattern.caseInsensitiveCompare(cwd) == .orderedSame
+        }
+        guard !exists else { return }
 
         var session = SessionConfig(
             name: name.isEmpty ? (cwd as NSString).lastPathComponent : name,
             cwdPattern: cwd,
-            order: configStore.sessions.count
+            order: configStore.sessions.count,
+            isAuto: isAuto
         )
         if !gifPath.isEmpty { session.gifPath = gifPath }
         configStore.sessions.append(session)
         configStore.save()
     }
 
-    // MARK: - Notification handling with debounce
+    // MARK: - Notification handling
 
     private func handleNotification(_ notification: SessionNotification) {
-        pendingNotification = notification
-        debounceTimer?.invalidate()
-
-        debounceTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: false) { [weak self] _ in
-            guard let self, let pending = self.pendingNotification else { return }
-            self.bubbleShownAt = Date()
-            self.characterView.showBubble(
-                message: pending.message,
-                sessionPath: pending.sessionPath,
-                name: pending.name
-            )
-            NSSound(named: NSSound.Name("Pop"))?.play()
-        }
+        bubbleShownAt = Date()
+        characterView.showBubble(
+            message: notification.message,
+            sessionPath: notification.sessionPath,
+            name: notification.name
+        )
+        NSSound(named: NSSound.Name("Pop"))?.play()
     }
 
     // MARK: - Overlay management
@@ -199,6 +196,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                )) {
                 self.characterView.hideBubble()
             }
+        }
+    }
+
+    // MARK: - Auto-cleanup dead sessions
+
+    private func startSessionCleanup() {
+        Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            self?.cleanupDeadSessions()
+        }
+    }
+
+    private func cleanupDeadSessions() {
+        let autoSessions = configStore.sessions.filter { $0.isAuto }
+        guard !autoSessions.isEmpty else { return }
+
+        let output = TerminalManager.shell(
+            "ps -eo pid,comm 2>/dev/null | awk '/claude/{print $1}' | while read pid; do lsof -a -p $pid -d cwd -Fn 2>/dev/null | grep '^n' | cut -c2-; done"
+        )
+        let activeCWDs = output.split(separator: "\n").map(String.init)
+
+        var changed = false
+        for session in autoSessions {
+            let alive = activeCWDs.contains {
+                $0.caseInsensitiveCompare(session.cwdPattern) == .orderedSame
+            }
+            if !alive {
+                configStore.sessions.removeAll { $0.id == session.id }
+                changed = true
+            }
+        }
+        if changed {
+            configStore.save()
         }
     }
 

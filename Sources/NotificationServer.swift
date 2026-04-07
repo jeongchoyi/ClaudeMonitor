@@ -18,11 +18,11 @@ class NotificationServer {
 
     private let listener: NWListener
     private let onNotify: (SessionNotification) -> Void
-    private let onRegister: (String, String, String) -> Void // name, cwd, gifPath
+    private let onRegister: (String, String, String, Bool) -> Void // name, cwd, gifPath, isAuto
 
     init(port: UInt16,
          onNotify: @escaping (SessionNotification) -> Void,
-         onRegister: @escaping (String, String, String) -> Void)
+         onRegister: @escaping (String, String, String, Bool) -> Void)
     {
         self.onNotify = onNotify
         self.onRegister = onRegister
@@ -94,12 +94,13 @@ class NotificationServer {
             let name = json["name"] as? String ?? ""
             let cwd = json["cwd"] as? String ?? ""
             let gifPath = json["gifPath"] as? String ?? ""
+            let isAuto = json["isAuto"] as? Bool ?? false
             guard !cwd.isEmpty else {
                 return ("{\"error\":\"cwd required\"}", nil)
             }
             let safeName = name.replacingOccurrences(of: "\"", with: "'")
             return ("{\"status\":\"registered\",\"name\":\"\(safeName)\"}", {
-                self.onRegister(name, cwd, gifPath)
+                self.onRegister(name, cwd, gifPath, isAuto)
             })
 
         default:

@@ -37,13 +37,29 @@ struct SessionConfig: Codable, Identifiable {
     var gifPath: String
     var cwdPattern: String
     var order: Int
+    var isAuto: Bool
 
-    init(name: String = "New Session", gifPath: String = "", cwdPattern: String = "", order: Int = 0) {
+    init(name: String = "New Session", gifPath: String = "", cwdPattern: String = "", order: Int = 0, isAuto: Bool = false) {
         self.id = UUID()
         self.name = name
         self.gifPath = gifPath
         self.cwdPattern = cwdPattern
         self.order = order
+        self.isAuto = isAuto
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, gifPath, cwdPattern, order, isAuto
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        gifPath = try c.decode(String.self, forKey: .gifPath)
+        cwdPattern = try c.decode(String.self, forKey: .cwdPattern)
+        order = try c.decode(Int.self, forKey: .order)
+        isAuto = try c.decodeIfPresent(Bool.self, forKey: .isAuto) ?? false
     }
 }
 

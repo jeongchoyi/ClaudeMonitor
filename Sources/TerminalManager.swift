@@ -143,7 +143,8 @@ enum TerminalManager {
 
     // MARK: - Helpers
 
-    private static func shell(_ command: String) -> String {
+    @discardableResult
+    static func shell(_ command: String) -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
         process.arguments = ["-c", command]

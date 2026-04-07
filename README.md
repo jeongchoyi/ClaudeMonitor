@@ -53,6 +53,17 @@ tar -xzf dist/ClaudeMonitor-macos-arm64.tar.gz
 ```json
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/path/to/ClaudeMonitor/Scripts/register-hook.sh"
+          }
+        ]
+      }
+    ],
     "Notification": [
       {
         "matcher": "",
@@ -69,6 +80,9 @@ tar -xzf dist/ClaudeMonitor-macos-arm64.tar.gz
 ```
 
 > `/path/to/ClaudeMonitor/`를 실제 설치 경로로 변경하세요.
+
+- **SessionStart**: 세션 시작 시 자동으로 ClaudeMonitor에 등록됩니다. 세션이 종료되면 자동으로 사라집니다.
+- **Notification**: Claude Code 작업 완료 시 말풍선 알림을 보냅니다.
 
 ### 2. 터미널 설정
 
@@ -89,40 +103,12 @@ tar -xzf dist/ClaudeMonitor-macos-arm64.tar.gz
 
 ### 3. 세션 등록
 
-**방법 A: 슬래시 커맨드 (추천)**
+Hook 설정을 완료하면 Claude Code 세션 시작 시 **자동으로 등록**됩니다. 세션 종료 후에는 자동으로 사라집니다.
 
-`~/.claude/commands/monitor.md` 생성:
+수동으로 등록하려면:
 
-```markdown
-Register this Claude Code session with ClaudeMonitor overlay app.
-
-Session name: $ARGUMENTS
-
-Steps:
-1. If the session name above is empty or blank, use the basename of the current working directory as the name
-2. Run the curl command below, replacing NAME with the session name and CWD with the full current working directory path:
-
-curl -s -X POST http://localhost:9877/register -H "Content-Type: application/json" -d '{"name":"NAME","cwd":"CWD"}'
-
-3. Report whether registration was successful based on the JSON response
-```
-
-그 다음 Claude Code 세션에서:
-```
-/monitor my-session-name
-```
-
-**방법 B: Settings UI**
-
-캐릭터 우클릭 (또는 Ctrl+클릭) → Settings → Add Session
-
-**방법 C: curl**
-
-```bash
-curl -s -X POST http://localhost:9877/register \
-  -H "Content-Type: application/json" \
-  -d '{"name":"my-session","cwd":"/path/to/project"}'
-```
+- **Settings UI**: 캐릭터 우클릭 → Settings → Add Session (수동 등록 세션은 자동 삭제되지 않음)
+- **curl**: `curl -s -X POST http://localhost:9877/register -H "Content-Type: application/json" -d '{"name":"my-session","cwd":"/path/to/project"}'`
 
 ### 4. 아바타 설정
 

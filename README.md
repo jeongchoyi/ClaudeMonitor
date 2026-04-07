@@ -26,7 +26,7 @@ Claude Code 세션을 모니터링하는 macOS 오버레이 앱.
 ### 소스에서 빌드
 
 ```bash
-git clone https://github.com/choyi-macarong/ClaudeMonitor.git
+git clone https://github.com/jeongchoyi/ClaudeMonitor.git
 cd ClaudeMonitor
 swift build -c release
 ```
@@ -38,7 +38,7 @@ swift build -c release
 
 ### 릴리즈 바이너리 다운로드
 
-[Releases](https://github.com/choyi-macarong/ClaudeMonitor/releases) 페이지에서 최신 바이너리를 다운로드하거나:
+[Releases](https://github.com/jeongchoyi/ClaudeMonitor/releases) 페이지에서 최신 바이너리를 다운로드하거나:
 
 ```bash
 # dist/ 에 포함된 바이너리 사용

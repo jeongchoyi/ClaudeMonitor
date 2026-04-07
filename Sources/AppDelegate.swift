@@ -19,6 +19,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var debounceTimer: Timer?
     private var pendingNotification: SessionNotification?
+    private var bubbleShownAt: Date?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         configStore = ConfigStore()
@@ -26,12 +27,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self?.reloadOverlay()
         }
 
+        loadAppIcon()
         setupOverlayWindow()
         setupContextMenu()
         setupServer()
+        startFocusMonitor()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             NSApp.setActivationPolicy(.accessory)
+        }
+    }
+
+    private func loadAppIcon() {
+        let iconPath = (ConfigStore.dirPath as NSString).appendingPathComponent("icon.png")
+        if let icon = NSImage(contentsOfFile: iconPath) {
+            NSApp.applicationIconImage = icon
         }
     }
 
@@ -61,6 +71,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             TerminalManager.activate(forPath: sessionPath)
             self?.characterView.hideBubble()
         }
+        TerminalManager.terminalApp = configStore.terminal
         characterView.updateSessions(configStore.sessions)
 
         overlayWindow.contentView = characterView
@@ -69,6 +80,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupContextMenu() {
         contextMenu = NSMenu()
+        contextMenu.addItem(NSMenuItem(
+            title: "New Session",
+            action: #selector(newSession),
+            keyEquivalent: ""
+        ))
+        contextMenu.addItem(.separator())
         contextMenu.addItem(NSMenuItem(
             title: "Settings...",
             action: #selector(openSettings),
@@ -127,8 +144,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         pendingNotification = notification
         debounceTimer?.invalidate()
 
-        debounceTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { [weak self] _ in
+        debounceTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: false) { [weak self] _ in
             guard let self, let pending = self.pendingNotification else { return }
+            self.bubbleShownAt = Date()
             self.characterView.showBubble(
                 message: pending.message,
                 sessionPath: pending.sessionPath,
@@ -147,6 +165,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func reloadOverlay() {
+        TerminalManager.terminalApp = configStore.terminal
         characterView.updateSessions(configStore.sessions)
 
         let count = max(configStore.sessions.count, 1)
@@ -160,6 +179,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         overlayWindow.setFrame(frame, display: true, animate: true)
 
         characterView.frame = NSRect(origin: .zero, size: frame.size)
+    }
+
+    // MARK: - Auto-dismiss bubble when user switches to terminal
+
+    private func startFocusMonitor() {
+        Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
+            guard let self, self.characterView.hasBubble else { return }
+            // Don't auto-dismiss within 8 seconds so user can see the notification
+            if let shownAt = self.bubbleShownAt, Date().timeIntervalSince(shownAt) < 8 { return }
+            guard let frontApp = NSWorkspace.shared.frontmostApplication,
+                  let bid = frontApp.bundleIdentifier else { return }
+            let termBID = self.configStore.terminal.bundleID
+            if (!termBID.isEmpty && bid == termBID) ||
+               (self.configStore.terminal == .tmux && (
+                   bid.contains("iterm2") || bid.contains("Terminal") ||
+                   bid.contains("warp") || bid.contains("ghostty") ||
+                   bid.contains("kitty") || bid.contains("alacritty")
+               )) {
+                self.characterView.hideBubble()
+            }
+        }
     }
 
     // MARK: - Settings window
@@ -196,6 +236,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Actions
+
+    @objc private func newSession() {
+        let script = """
+        tell application "iTerm2"
+            activate
+            tell current window
+                create tab with default profile
+            end tell
+        end tell
+        """
+        var error: NSDictionary?
+        NSAppleScript(source: script)?.executeAndReturnError(&error)
+        if error != nil {
+            // iTerm2 not running, open new window
+            NSWorkspace.shared.launchApplication("iTerm")
+        }
+    }
 
     @objc private func resetPosition() {
         let mouseLocation = NSEvent.mouseLocation

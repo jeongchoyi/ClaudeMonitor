@@ -25,6 +25,22 @@ struct ConfigView: View {
             }
             .padding()
 
+            // Terminal selector
+            HStack {
+                Text("Terminal")
+                    .foregroundColor(.secondary)
+                Picker("", selection: $store.terminal) {
+                    ForEach(TerminalApp.allCases) { app in
+                        Text(app.rawValue).tag(app)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 150)
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+
             Divider()
 
             // Session list

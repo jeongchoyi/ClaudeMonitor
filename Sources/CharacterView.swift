@@ -16,6 +16,7 @@ class CharacterView: NSView {
     private var sessions: [SessionConfig] = []
     private var avatarFrames: [UUID: [NSImage]] = [:]
     private var avatarFrameIndices: [UUID: Int] = [:]
+    private var avatarData: [UUID: Data] = [:]
     private var gifTimer: Timer?
 
     // Bubble
@@ -44,6 +45,8 @@ class CharacterView: NSView {
 
     override init(frame: NSRect) {
         super.init(frame: frame)
+        wantsLayer = true
+        layer?.drawsAsynchronously = true
         startIdleAnimation()
         startGifAnimation()
     }
@@ -53,6 +56,8 @@ class CharacterView: NSView {
     }
 
     // MARK: - Public
+
+    var hasBubble: Bool { bubbleView != nil }
 
     func updateSessions(_ newSessions: [SessionConfig]) {
         sessions = newSessions
@@ -117,6 +122,8 @@ class CharacterView: NSView {
 
     // MARK: - Hit Testing
 
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
     override func hitTest(_ point: NSPoint) -> NSView? {
         if let bubble = bubbleView {
             let p = convert(point, to: bubble)
@@ -142,7 +149,8 @@ class CharacterView: NSView {
     // MARK: - Drawing
 
     override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
+        NSColor.clear.setFill()
+        bounds.fill(using: .copy)
         guard let context = NSGraphicsContext.current?.cgContext else { return }
 
         if sessions.isEmpty {
@@ -316,22 +324,44 @@ class CharacterView: NSView {
     private func reloadAvatars() {
         avatarFrames.removeAll()
         avatarFrameIndices.removeAll()
+        avatarData.removeAll()
 
         for session in sessions {
             guard !session.gifPath.isEmpty else { continue }
             let path = (session.gifPath as NSString).expandingTildeInPath
-            guard FileManager.default.fileExists(atPath: path) else { continue }
+            guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else { continue }
+            guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { continue }
 
-            let url = URL(fileURLWithPath: path)
-            guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { continue }
+            avatarData[session.id] = data // keep data alive
 
-            let frameCount = CGImageSourceGetCount(source)
+            let frameCount = min(CGImageSourceGetCount(source), 200)
             var frames: [NSImage] = []
+            // Accumulate frames to handle delta/dispose correctly
+            let canvasW = 128
+            let canvasH = 128
+            guard let canvas = CGContext(
+                data: nil, width: canvasW, height: canvasH,
+                bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else { continue }
+
             for i in 0..<frameCount {
                 guard let cgImage = CGImageSourceCreateImageAtIndex(source, i, nil) else { continue }
-                let w = CGFloat(cgImage.width)
-                let h = CGFloat(cgImage.height)
-                frames.append(NSImage(cgImage: cgImage, size: NSSize(width: w, height: h)))
+                let imgW = cgImage.width
+                let imgH = cgImage.height
+                let scale = min(Double(canvasW) / Double(imgW), Double(canvasH) / Double(imgH))
+                let dw = Double(imgW) * scale
+                let dh = Double(imgH) * scale
+                let dx = (Double(canvasW) - dw) / 2
+                let dy = (Double(canvasH) - dh) / 2
+
+                // Clear canvas each frame for clean rendering
+                canvas.clear(CGRect(x: 0, y: 0, width: canvasW, height: canvasH))
+                canvas.draw(cgImage, in: CGRect(x: dx, y: dy, width: dw, height: dh))
+
+                guard let snapshot = canvas.makeImage() else { continue }
+                frames.append(NSImage(cgImage: snapshot, size: NSSize(width: CGFloat(canvasW), height: CGFloat(canvasH))))
             }
             guard !frames.isEmpty else { continue }
             avatarFrames[session.id] = frames

@@ -1,5 +1,7 @@
 # ClaudeMonitor
 
+<img width="443" height="249" alt="image" src="https://github.com/user-attachments/assets/ff8c65e9-4692-402d-b224-a2e21a6d039f" />
+
 Claude Code 세션을 모니터링하는 macOS 오버레이 앱.  
 여러 Claude Code 세션을 캐릭터로 화면에 띄워두고, 작업 완료 시 말풍선 알림을 받을 수 있습니다.
 
@@ -16,6 +18,8 @@ Claude Code 세션을 모니터링하는 macOS 오버레이 앱.
 - 다양한 터미널 지원: iTerm2, Terminal.app, Warp, Ghostty, Kitty, Alacritty, tmux
 - Settings UI에서 세션/터미널 설정
 - `/monitor` 슬래시 커맨드로 세션 자동 등록
+
+<img width="560" height="544" alt="Vector" src="https://github.com/user-attachments/assets/6f082209-adde-4f56-9e6b-52abd2feb6f4" />
 
 ## Install
 

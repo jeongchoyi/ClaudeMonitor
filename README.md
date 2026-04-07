@@ -15,7 +15,7 @@ Claude Code 세션을 모니터링하는 macOS 오버레이 앱.
 - Claude Code 작업 완료 시 말풍선 알림 + 사운드
 - 말풍선/캐릭터 클릭 시 해당 세션의 터미널 탭으로 이동
 - 드래그로 위치 이동
-- 다양한 터미널 지원: iTerm2, Terminal.app, Warp, Ghostty, Kitty, Alacritty, tmux
+- 다양한 터미널 지원: iTerm2, Terminal.app, cmux, Warp, Ghostty, Kitty, Alacritty, tmux
 - Settings UI에서 세션/터미널 설정
 - `/monitor` 슬래시 커맨드로 세션 자동 등록
 
@@ -80,6 +80,7 @@ swift build -c release
 |--------|---------|-----------|
 | **iTerm2** | CWD 기반 자동 매칭 | Automation (AppleScript) |
 | **Terminal.app** | 탭 이름 기반 매칭 | Automation (AppleScript) |
+| **cmux** | 앱 활성화 | 없음 |
 | **tmux** | pane CWD 기반 매칭 | 없음 |
 | **Warp** | 앱 활성화 | 없음 |
 | **Ghostty** | 앱 활성화 | 없음 |

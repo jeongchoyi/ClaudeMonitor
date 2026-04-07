@@ -10,6 +10,7 @@ import Foundation
 enum TerminalApp: String, Codable, CaseIterable, Identifiable {
     case iterm2 = "iTerm2"
     case terminal = "Terminal"
+    case cmux = "cmux"
     case tmux = "tmux"
     case warp = "Warp"
     case ghostty = "Ghostty"
@@ -22,6 +23,7 @@ enum TerminalApp: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .iterm2: "com.googlecode.iterm2"
         case .terminal: "com.apple.Terminal"
+        case .cmux: "com.cmuxterm.app"
         case .tmux: "" // tmux runs inside another terminal
         case .warp: "dev.warp.Warp-Stable"
         case .ghostty: "com.mitchellh.ghostty"

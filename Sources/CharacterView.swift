@@ -86,7 +86,7 @@ class CharacterView: NSView {
 
         let bubble = BubbleView(
             message: message,
-            borderColor: mainColor.nsColor.withAlphaComponent(0.3)
+            borderColor: mainColor.nsColor.withAlphaComponent(0.85)
         )
         let bubbleSize = bubble.intrinsicContentSize
 
@@ -106,6 +106,7 @@ class CharacterView: NSView {
             width: bubbleSize.width,
             height: bubbleSize.height
         )
+        bubble.tailX = cx - bubbleX
         bubble.onClick = { [weak self] in
             guard let self else { return }
             self.onBubbleClicked?(self.activeSessionPath)

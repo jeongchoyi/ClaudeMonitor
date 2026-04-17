@@ -22,7 +22,12 @@ enum TerminalManager {
             $0.bundleIdentifier == bundleID
         }) else { return }
 
-        app.activate()
+        // If our Settings window is keeping ClaudeMonitor frontmost, target
+        // apps won't activate. Yield focus before requesting activation.
+        if NSApp.isActive {
+            NSApp.deactivate()
+        }
+        app.activate(options: [.activateAllWindows])
 
         switch terminalApp {
         case .iterm2:
@@ -72,6 +77,7 @@ enum TerminalManager {
             if check.range(of: path, options: .caseInsensitive) != nil {
                 let selectScript = """
                 tell application "iTerm2"
+                    activate
                     set w to item \(wIdx) of windows
                     set t to item \(tIdx) of tabs of w
                     select t
@@ -92,6 +98,7 @@ enum TerminalManager {
 
         let script = """
         tell application "Terminal"
+            activate
             repeat with w in windows
                 repeat with t in tabs of w
                     try

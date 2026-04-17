@@ -11,10 +11,18 @@ class BubbleView: NSView {
 
     var onClick: (() -> Void)?
 
+    // X position of the tail tip in the bubble's coordinate space.
+    // Set by the owner so the tail points at the character, even when the
+    // bubble is clamped to the window edge.
+    var tailX: CGFloat? {
+        didSet { needsDisplay = true }
+    }
+
     private let message: String
     private let borderColor: NSColor
     private let padding: CGFloat = 12
     private let tailHeight: CGFloat = 8
+    private let tailHalfWidth: CGFloat = 6
     private let maxTextWidth: CGFloat = 200
 
     private let textStorage: NSAttributedString
@@ -30,7 +38,7 @@ class BubbleView: NSView {
         self.textStorage = NSAttributedString(
             string: message,
             attributes: [
-                .font: NSFont.systemFont(ofSize: 12, weight: .medium),
+                .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
                 .foregroundColor: NSColor.labelColor,
                 .paragraphStyle: style,
             ]
@@ -67,19 +75,23 @@ class BubbleView: NSView {
 
         let bubblePath = NSBezierPath(roundedRect: bubbleRect, xRadius: 10, yRadius: 10)
 
-        // Tail triangle
+        // Tail triangle — pointed at tailX if provided, clamped to stay on
+        // the bubble edge with room for the triangle base.
+        let minTail = tailHalfWidth + 10
+        let maxTail = bounds.width - tailHalfWidth - 10
+        let rawTail = tailX ?? bounds.midX
+        let tailCenter = min(max(rawTail, minTail), maxTail)
         let tailPath = NSBezierPath()
-        let tailCenter = bounds.midX
-        tailPath.move(to: NSPoint(x: tailCenter - 6, y: tailHeight))
+        tailPath.move(to: NSPoint(x: tailCenter - tailHalfWidth, y: tailHeight))
         tailPath.line(to: NSPoint(x: tailCenter, y: 0))
-        tailPath.line(to: NSPoint(x: tailCenter + 6, y: tailHeight))
+        tailPath.line(to: NSPoint(x: tailCenter + tailHalfWidth, y: tailHeight))
         tailPath.close()
 
         // Shadow
         let shadow = NSShadow()
-        shadow.shadowColor = NSColor.black.withAlphaComponent(0.15)
+        shadow.shadowColor = NSColor.black.withAlphaComponent(0.28)
         shadow.shadowOffset = NSSize(width: 0, height: -2)
-        shadow.shadowBlurRadius = 6
+        shadow.shadowBlurRadius = 10
         shadow.set()
 
         NSColor.white.setFill()
@@ -89,9 +101,9 @@ class BubbleView: NSView {
         // Reset shadow
         NSShadow().set()
 
-        // Border
+        // Border — thicker and more saturated so the bubble stands out
         borderColor.setStroke()
-        bubblePath.lineWidth = 1
+        bubblePath.lineWidth = 2
         bubblePath.stroke()
 
         // Text

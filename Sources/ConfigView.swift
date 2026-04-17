@@ -56,6 +56,32 @@ struct ConfigView: View {
                 Spacer()
             }
             .padding(.horizontal)
+            .padding(.bottom, 4)
+
+            // Color selector
+            HStack(spacing: 8) {
+                Text("Color")
+                    .foregroundColor(.secondary)
+                ForEach(MainColor.allCases) { color in
+                    Circle()
+                        .fill(Color(nsColor: color.nsColor))
+                        .frame(width: 20, height: 20)
+                        .overlay(
+                            Circle()
+                                .strokeBorder(Color.primary.opacity(0.4), lineWidth: 1)
+                        )
+                        .overlay(
+                            Circle()
+                                .strokeBorder(Color.accentColor, lineWidth: 2)
+                                .opacity(store.mainColor == color ? 1 : 0)
+                                .padding(-3)
+                        )
+                        .onTapGesture { store.mainColor = color }
+                        .help(color.rawValue)
+                }
+                Spacer()
+            }
+            .padding(.horizontal)
             .padding(.bottom, 8)
 
             Divider()
@@ -66,6 +92,7 @@ struct ConfigView: View {
                     ForEach($store.sessions) { $session in
                         SessionRowView(
                             session: $session,
+                            mainColor: store.mainColor,
                             onMoveUp: { store.moveUp(session.id) },
                             onMoveDown: { store.moveDown(session.id) },
                             onDelete: { store.remove(session.id) }
@@ -111,6 +138,7 @@ struct ConfigView: View {
 
 struct SessionRowView: View {
     @Binding var session: SessionConfig
+    let mainColor: MainColor
     let onMoveUp: () -> Void
     let onMoveDown: () -> Void
     let onDelete: () -> Void
@@ -121,7 +149,7 @@ struct SessionRowView: View {
             gifPreview
                 .frame(width: 48, height: 48)
                 .clipShape(Circle())
-                .overlay(Circle().stroke(Color.purple.opacity(0.3), lineWidth: 2))
+                .overlay(Circle().stroke(Color(nsColor: mainColor.nsColor).opacity(0.3), lineWidth: 2))
 
             // Fields
             VStack(spacing: 6) {
@@ -199,7 +227,7 @@ struct SessionRowView: View {
                 .aspectRatio(contentMode: .fill)
         } else {
             Circle()
-                .fill(Color.purple)
+                .fill(Color(nsColor: mainColor.nsColor))
                 .overlay(
                     Text(String(session.name.prefix(1)).uppercased())
                         .font(.title3.bold())

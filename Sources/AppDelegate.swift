@@ -67,6 +67,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             frame: NSRect(origin: .zero, size: windowSize)
         )
         characterView.sizeScale = configStore.characterSize.scale
+        characterView.mainColor = configStore.mainColor
         characterView.onBubbleClicked = { [weak self] sessionPath in
             TerminalManager.activate(forPath: sessionPath)
             self?.characterView.hideBubble()
@@ -171,6 +172,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func reloadOverlay() {
         TerminalManager.terminalApp = configStore.terminal
         characterView.sizeScale = configStore.characterSize.scale
+        characterView.mainColor = configStore.mainColor
         characterView.updateSessions(configStore.sessions)
 
         let count = max(configStore.sessions.count, 1)

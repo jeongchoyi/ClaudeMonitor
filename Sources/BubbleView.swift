@@ -12,14 +12,16 @@ class BubbleView: NSView {
     var onClick: (() -> Void)?
 
     private let message: String
+    private let borderColor: NSColor
     private let padding: CGFloat = 12
     private let tailHeight: CGFloat = 8
     private let maxTextWidth: CGFloat = 200
 
     private let textStorage: NSAttributedString
 
-    init(message: String) {
+    init(message: String, borderColor: NSColor) {
         self.message = message
+        self.borderColor = borderColor
 
         let style = NSMutableParagraphStyle()
         style.alignment = .center
@@ -88,7 +90,7 @@ class BubbleView: NSView {
         NSShadow().set()
 
         // Border
-        NSColor(red: 0.486, green: 0.361, blue: 0.988, alpha: 0.3).setStroke()
+        borderColor.setStroke()
         bubblePath.lineWidth = 1
         bubblePath.stroke()
 

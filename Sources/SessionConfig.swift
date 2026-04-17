@@ -5,7 +5,47 @@
 //  Created by Choyi on 2026/04/02.
 //
 
+import AppKit
 import Foundation
+
+enum MainColor: String, Codable, CaseIterable, Identifiable {
+    case red = "Red"
+    case orange = "Orange"
+    case yellow = "Yellow"
+    case green = "Green"
+    case blue = "Blue"
+    case indigo = "Indigo"
+    case purple = "Purple"
+    case black = "Black"
+    case pink = "Pink"
+
+    var id: String { rawValue }
+
+    var nsColor: NSColor {
+        switch self {
+        case .red: NSColor(red: 0.91, green: 0.30, blue: 0.24, alpha: 1.0)
+        case .orange: NSColor(red: 0.98, green: 0.55, blue: 0.16, alpha: 1.0)
+        case .yellow: NSColor(red: 0.97, green: 0.79, blue: 0.16, alpha: 1.0)
+        case .green: NSColor(red: 0.30, green: 0.76, blue: 0.54, alpha: 1.0)
+        case .blue: NSColor(red: 0.20, green: 0.56, blue: 0.90, alpha: 1.0)
+        case .indigo: NSColor(red: 0.29, green: 0.31, blue: 0.64, alpha: 1.0)
+        case .purple: NSColor(red: 0.49, green: 0.36, blue: 0.99, alpha: 1.0)
+        case .black: NSColor(red: 0.15, green: 0.15, blue: 0.18, alpha: 1.0)
+        case .pink: NSColor(red: 0.96, green: 0.44, blue: 0.70, alpha: 1.0)
+        }
+    }
+
+    // Darker variant for name pill background so white text stays legible.
+    var pillColor: NSColor {
+        let c = nsColor
+        return NSColor(
+            red: c.redComponent * 0.65,
+            green: c.greenComponent * 0.65,
+            blue: c.blueComponent * 0.65,
+            alpha: 0.85
+        )
+    }
+}
 
 enum CharacterSize: String, Codable, CaseIterable, Identifiable {
     case small = "Small"
@@ -85,15 +125,17 @@ struct AppConfig: Codable {
     var terminal: TerminalApp
     var sessions: [SessionConfig]
     var characterSize: CharacterSize
+    var mainColor: MainColor
 
-    init(terminal: TerminalApp = .iterm2, sessions: [SessionConfig] = [], characterSize: CharacterSize = .small) {
+    init(terminal: TerminalApp = .iterm2, sessions: [SessionConfig] = [], characterSize: CharacterSize = .small, mainColor: MainColor = .purple) {
         self.terminal = terminal
         self.sessions = sessions
         self.characterSize = characterSize
+        self.mainColor = mainColor
     }
 
     enum CodingKeys: String, CodingKey {
-        case terminal, sessions, characterSize
+        case terminal, sessions, characterSize, mainColor
     }
 
     init(from decoder: Decoder) throws {
@@ -101,6 +143,7 @@ struct AppConfig: Codable {
         terminal = try c.decode(TerminalApp.self, forKey: .terminal)
         sessions = try c.decode([SessionConfig].self, forKey: .sessions)
         characterSize = try c.decodeIfPresent(CharacterSize.self, forKey: .characterSize) ?? .small
+        mainColor = try c.decodeIfPresent(MainColor.self, forKey: .mainColor) ?? .purple
     }
 }
 
@@ -108,6 +151,7 @@ class ConfigStore: ObservableObject {
     @Published var sessions: [SessionConfig] = []
     @Published var terminal: TerminalApp = .iterm2
     @Published var characterSize: CharacterSize = .small
+    @Published var mainColor: MainColor = .purple
 
     var onChange: (() -> Void)?
 
@@ -126,6 +170,7 @@ class ConfigStore: ObservableObject {
             terminal = config.terminal
             sessions = config.sessions.sorted { $0.order < $1.order }
             characterSize = config.characterSize
+            mainColor = config.mainColor
         } else if var legacy = try? JSONDecoder().decode([SessionConfig].self, from: data) {
             legacy.sort { $0.order < $1.order }
             sessions = legacy
@@ -142,7 +187,7 @@ class ConfigStore: ObservableObject {
             withIntermediateDirectories: true
         )
 
-        let config = AppConfig(terminal: terminal, sessions: sessions, characterSize: characterSize)
+        let config = AppConfig(terminal: terminal, sessions: sessions, characterSize: characterSize, mainColor: mainColor)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted]
         guard let data = try? encoder.encode(config) else { return }

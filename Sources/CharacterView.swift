@@ -37,6 +37,12 @@ class CharacterView: NSView {
             needsDisplay = true
         }
     }
+    var mainColor: MainColor = .purple {
+        didSet {
+            guard oldValue != mainColor else { return }
+            needsDisplay = true
+        }
+    }
     var slotWidth: CGFloat { 80 * sizeScale }
     private var characterSize: CGFloat { 56 * sizeScale }
     private var characterBaseY: CGFloat { 24 * sizeScale }
@@ -78,7 +84,10 @@ class CharacterView: NSView {
 
         bubbleView?.removeFromSuperview()
 
-        let bubble = BubbleView(message: message)
+        let bubble = BubbleView(
+            message: message,
+            borderColor: mainColor.nsColor.withAlphaComponent(0.3)
+        )
         let bubbleSize = bubble.intrinsicContentSize
 
         let slotIndex: Int
@@ -311,7 +320,7 @@ class CharacterView: NSView {
             width: textSize.width + pillPadX * 2,
             height: textSize.height + pillPadY
         )
-        NSColor(red: 0.3, green: 0.22, blue: 0.65, alpha: 0.85).setFill()
+        mainColor.pillColor.setFill()
         NSBezierPath(roundedRect: pillRect, xRadius: 7, yRadius: 7).fill()
 
         text.draw(in: NSRect(

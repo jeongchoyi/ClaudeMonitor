@@ -39,6 +39,23 @@ struct ConfigView: View {
                 Spacer()
             }
             .padding(.horizontal)
+            .padding(.bottom, 4)
+
+            // Character size selector
+            HStack {
+                Text("Size")
+                    .foregroundColor(.secondary)
+                Picker("", selection: $store.characterSize) {
+                    ForEach(CharacterSize.allCases) { size in
+                        Text(size.rawValue).tag(size)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 220)
+                Spacer()
+            }
+            .padding(.horizontal)
             .padding(.bottom, 8)
 
             Divider()

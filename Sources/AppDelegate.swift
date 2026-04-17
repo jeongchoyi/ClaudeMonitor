@@ -66,6 +66,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         characterView = CharacterView(
             frame: NSRect(origin: .zero, size: windowSize)
         )
+        characterView.sizeScale = configStore.characterSize.scale
         characterView.onBubbleClicked = { [weak self] sessionPath in
             TerminalManager.activate(forPath: sessionPath)
             self?.characterView.hideBubble()
@@ -161,23 +162,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Overlay management
 
     private func overlaySize() -> NSSize {
+        let scale = configStore.characterSize.scale
         let count = max(configStore.sessions.count, 1)
-        let width = max(CGFloat(count) * 80 + 40, 300)
-        return NSSize(width: width, height: 220)
+        let width = max(CGFloat(count) * 80 * scale + 40, 300)
+        return NSSize(width: width, height: 220 * scale)
     }
 
     private func reloadOverlay() {
         TerminalManager.terminalApp = configStore.terminal
+        characterView.sizeScale = configStore.characterSize.scale
         characterView.updateSessions(configStore.sessions)
 
         let count = max(configStore.sessions.count, 1)
         let slotWidth = characterView.slotWidth
         let newWidth = max(CGFloat(count) * slotWidth + 40, 300)
+        let newHeight = 220 * configStore.characterSize.scale
 
         var frame = overlayWindow.frame
         let rightEdge = frame.maxX
+        let topEdge = frame.maxY
         frame.size.width = newWidth
+        frame.size.height = newHeight
         frame.origin.x = rightEdge - newWidth
+        frame.origin.y = topEdge - newHeight
         overlayWindow.setFrame(frame, display: true, animate: true)
 
         characterView.frame = NSRect(origin: .zero, size: frame.size)

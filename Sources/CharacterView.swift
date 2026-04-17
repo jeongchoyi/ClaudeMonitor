@@ -31,9 +31,15 @@ class CharacterView: NSView {
     private var eyeOffset: CGFloat = 0
 
     // Layout
-    let slotWidth: CGFloat = 80
-    private let characterSize: CGFloat = 56
-    private let characterBaseY: CGFloat = 24
+    var sizeScale: CGFloat = 1.0 {
+        didSet {
+            guard oldValue != sizeScale else { return }
+            needsDisplay = true
+        }
+    }
+    var slotWidth: CGFloat { 80 * sizeScale }
+    private var characterSize: CGFloat { 56 * sizeScale }
+    private var characterBaseY: CGFloat { 24 * sizeScale }
 
     private let colors: [NSColor] = [
         NSColor(red: 0.486, green: 0.361, blue: 0.988, alpha: 1.0),
@@ -252,9 +258,9 @@ class CharacterView: NSView {
         context.restoreGState()
 
         let eyeY = baseY + size * 0.55
-        let eyeSpacing: CGFloat = 8
-        let eyeSize: CGFloat = 11
-        let pupilSize: CGFloat = 5
+        let eyeSpacing = size * 0.143
+        let eyeSize = size * 0.196
+        let pupilSize = size * 0.089
 
         for side: CGFloat in [-1, 1] {
             let eyeX = centerX + side * eyeSpacing
@@ -269,15 +275,17 @@ class CharacterView: NSView {
             )).fill()
         }
 
+        let smileOffset = size * 0.107
+        let smileControlOffset = size * 0.054
         let smilePath = NSBezierPath()
-        smilePath.move(to: NSPoint(x: centerX - 6, y: baseY + size * 0.38))
+        smilePath.move(to: NSPoint(x: centerX - smileOffset, y: baseY + size * 0.38))
         smilePath.curve(
-            to: NSPoint(x: centerX + 6, y: baseY + size * 0.38),
-            controlPoint1: NSPoint(x: centerX - 3, y: baseY + size * 0.28),
-            controlPoint2: NSPoint(x: centerX + 3, y: baseY + size * 0.28)
+            to: NSPoint(x: centerX + smileOffset, y: baseY + size * 0.38),
+            controlPoint1: NSPoint(x: centerX - smileControlOffset, y: baseY + size * 0.28),
+            controlPoint2: NSPoint(x: centerX + smileControlOffset, y: baseY + size * 0.28)
         )
         NSColor.white.setStroke()
-        smilePath.lineWidth = 1.5
+        smilePath.lineWidth = 1.5 * sizeScale
         smilePath.stroke()
     }
 
@@ -285,26 +293,30 @@ class CharacterView: NSView {
         let style = NSMutableParagraphStyle()
         style.alignment = .center
 
+        let fontSize = 9 * sizeScale
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 9, weight: .semibold),
+            .font: NSFont.systemFont(ofSize: fontSize, weight: .semibold),
             .foregroundColor: NSColor.white,
             .paragraphStyle: style,
         ]
         let text = name as NSString
         let textSize = text.size(withAttributes: attrs)
+        let pillPadX = 5 * sizeScale
+        let pillPadY = 4 * sizeScale
+        let gapY = 6 * sizeScale
 
         let pillRect = NSRect(
-            x: centerX - textSize.width / 2 - 5,
-            y: baseY - textSize.height - 6,
-            width: textSize.width + 10,
-            height: textSize.height + 4
+            x: centerX - textSize.width / 2 - pillPadX,
+            y: baseY - textSize.height - gapY,
+            width: textSize.width + pillPadX * 2,
+            height: textSize.height + pillPadY
         )
         NSColor(red: 0.3, green: 0.22, blue: 0.65, alpha: 0.85).setFill()
         NSBezierPath(roundedRect: pillRect, xRadius: 7, yRadius: 7).fill()
 
         text.draw(in: NSRect(
             x: centerX - textSize.width / 2,
-            y: baseY - textSize.height - 4,
+            y: baseY - textSize.height - gapY + pillPadY / 2,
             width: textSize.width,
             height: textSize.height
         ), withAttributes: attrs)

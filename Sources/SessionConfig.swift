@@ -7,6 +7,22 @@
 
 import Foundation
 
+enum CharacterSize: String, Codable, CaseIterable, Identifiable {
+    case small = "Small"
+    case medium = "Medium"
+    case large = "Large"
+
+    var id: String { rawValue }
+
+    var scale: CGFloat {
+        switch self {
+        case .small: 1.0
+        case .medium: 1.3
+        case .large: 1.6
+        }
+    }
+}
+
 enum TerminalApp: String, Codable, CaseIterable, Identifiable {
     case iterm2 = "iTerm2"
     case terminal = "Terminal"
@@ -68,16 +84,30 @@ struct SessionConfig: Codable, Identifiable {
 struct AppConfig: Codable {
     var terminal: TerminalApp
     var sessions: [SessionConfig]
+    var characterSize: CharacterSize
 
-    init(terminal: TerminalApp = .iterm2, sessions: [SessionConfig] = []) {
+    init(terminal: TerminalApp = .iterm2, sessions: [SessionConfig] = [], characterSize: CharacterSize = .small) {
         self.terminal = terminal
         self.sessions = sessions
+        self.characterSize = characterSize
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case terminal, sessions, characterSize
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        terminal = try c.decode(TerminalApp.self, forKey: .terminal)
+        sessions = try c.decode([SessionConfig].self, forKey: .sessions)
+        characterSize = try c.decodeIfPresent(CharacterSize.self, forKey: .characterSize) ?? .small
     }
 }
 
 class ConfigStore: ObservableObject {
     @Published var sessions: [SessionConfig] = []
     @Published var terminal: TerminalApp = .iterm2
+    @Published var characterSize: CharacterSize = .small
 
     var onChange: (() -> Void)?
 
@@ -95,6 +125,7 @@ class ConfigStore: ObservableObject {
         if let config = try? JSONDecoder().decode(AppConfig.self, from: data) {
             terminal = config.terminal
             sessions = config.sessions.sorted { $0.order < $1.order }
+            characterSize = config.characterSize
         } else if var legacy = try? JSONDecoder().decode([SessionConfig].self, from: data) {
             legacy.sort { $0.order < $1.order }
             sessions = legacy
@@ -111,7 +142,7 @@ class ConfigStore: ObservableObject {
             withIntermediateDirectories: true
         )
 
-        let config = AppConfig(terminal: terminal, sessions: sessions)
+        let config = AppConfig(terminal: terminal, sessions: sessions, characterSize: characterSize)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted]
         guard let data = try? encoder.encode(config) else { return }

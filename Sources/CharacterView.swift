@@ -305,7 +305,7 @@ class CharacterView: NSView {
         let fontSize = 9 * sizeScale
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: fontSize, weight: .semibold),
-            .foregroundColor: NSColor.white,
+            .foregroundColor: mainColor.pillTextColor,
             .paragraphStyle: style,
         ]
         let text = name as NSString

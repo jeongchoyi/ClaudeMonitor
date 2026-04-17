@@ -35,15 +35,29 @@ enum MainColor: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    // Darker variant for name pill background so white text stays legible.
+    // Hand-tuned pill colors — uniform darkening turned yellow muddy, so
+    // each value is picked for the color family to stay recognizable while
+    // keeping contrast with the name label.
     var pillColor: NSColor {
-        let c = nsColor
-        return NSColor(
-            red: c.redComponent * 0.65,
-            green: c.greenComponent * 0.65,
-            blue: c.blueComponent * 0.65,
-            alpha: 0.85
-        )
+        switch self {
+        case .red: NSColor(red: 0.72, green: 0.18, blue: 0.14, alpha: 0.85)
+        case .orange: NSColor(red: 0.82, green: 0.38, blue: 0.08, alpha: 0.85)
+        case .yellow: NSColor(red: 0.97, green: 0.82, blue: 0.20, alpha: 0.95)
+        case .green: NSColor(red: 0.15, green: 0.50, blue: 0.32, alpha: 0.85)
+        case .blue: NSColor(red: 0.10, green: 0.38, blue: 0.68, alpha: 0.85)
+        case .indigo: NSColor(red: 0.20, green: 0.22, blue: 0.46, alpha: 0.85)
+        case .purple: NSColor(red: 0.30, green: 0.22, blue: 0.65, alpha: 0.85)
+        case .black: NSColor(red: 0.10, green: 0.10, blue: 0.12, alpha: 0.92)
+        case .pink: NSColor(red: 0.82, green: 0.28, blue: 0.54, alpha: 0.85)
+        }
+    }
+
+    // Yellow is too bright for white text; use dark text there.
+    var pillTextColor: NSColor {
+        switch self {
+        case .yellow: NSColor(red: 0.20, green: 0.15, blue: 0.05, alpha: 1.0)
+        default: .white
+        }
     }
 }
 

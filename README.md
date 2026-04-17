@@ -13,11 +13,12 @@ Claude Code 세션을 모니터링하는 macOS 오버레이 앱.
 
 - 항상 최상위에 떠있는 오버레이 캐릭터 (모든 Space + 전체화면에서 표시)
 - 세션별 커스텀 GIF 아바타
-- Claude Code 작업 완료 시 말풍선 알림 + 사운드
+- Claude Code 응답 완료 / 권한 요청 시 말풍선 알림 + 사운드
 - 말풍선/캐릭터 클릭 시 해당 세션의 터미널 탭으로 이동
 - 드래그로 위치 이동
+- 캐릭터 크기 설정 (Small / Medium / Large)
 - 다양한 터미널 지원: iTerm2, Terminal.app, cmux, Warp, Ghostty, Kitty, Alacritty, tmux
-- Settings UI에서 세션/터미널 설정
+- Settings UI에서 세션/터미널/크기 설정
 - `/monitor` 슬래시 커맨드로 세션 자동 등록
 
 <img width="560" height="544" alt="Vector" src="https://github.com/user-attachments/assets/21e6186e-7960-4262-99ac-7db9bc8c5a96" />
@@ -54,6 +55,17 @@ swift build -c release
         ]
       }
     ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/path/to/ClaudeMonitor/Scripts/notify-hook.sh"
+          }
+        ]
+      }
+    ],
     "Notification": [
       {
         "matcher": "",
@@ -72,7 +84,8 @@ swift build -c release
 > `/path/to/ClaudeMonitor/`를 실제 설치 경로로 변경하세요.
 
 - **SessionStart**: 세션 시작 시 자동으로 ClaudeMonitor에 등록됩니다. 세션이 종료되면 자동으로 사라집니다.
-- **Notification**: Claude Code 작업 완료 시 말풍선 알림을 보냅니다.
+- **Stop**: Claude 응답이 완전히 끝났을 때(툴 실행 중/중간 단계엔 fire 안 됨) 말풍선을 띄웁니다. "진짜 다 끝났을 때만" 알림 받고 싶으면 이것만 써도 됩니다.
+- **Notification**: Claude가 사용자 입력을 기다릴 때(권한 요청 / 60초 idle) 말풍선을 띄웁니다. 중간에 Allow/Deny 확인 필요한 경우를 놓치지 않으려면 Stop과 함께 쓰세요.
 
 ### 2. 터미널 설정
 
@@ -105,6 +118,11 @@ Hook 설정을 완료하면 Claude Code 세션 시작 시 **자동으로 등록*
 
 Settings에서 GIF/PNG/JPG 파일을 선택하면 `~/.claude-monitor/avatars/`에 자동 복사됩니다.
 GIF 파일은 애니메이션으로 표시됩니다.
+
+### 5. 캐릭터 크기
+
+Settings의 **Size** 선택에서 `Small` / `Medium` / `Large` 중 선택할 수 있습니다 (기본값: Small).
+캐릭터 본체, 이름 라벨, 오버레이 창 크기가 함께 스케일됩니다.
 
 ## Usage
 
@@ -144,6 +162,7 @@ curl -X POST http://localhost:9877/register \
 ```json
 {
   "terminal": "iTerm2",
+  "characterSize": "Small",
   "sessions": [
     {
       "name": "my-project",
@@ -155,4 +174,5 @@ curl -X POST http://localhost:9877/register \
 }
 ```
 
-`terminal` 값: `iTerm2`, `Terminal`, `tmux`, `Warp`, `Ghostty`, `Kitty`, `Alacritty`
+- `terminal` 값: `iTerm2`, `Terminal`, `cmux`, `tmux`, `Warp`, `Ghostty`, `Kitty`, `Alacritty`
+- `characterSize` 값: `Small`, `Medium`, `Large`

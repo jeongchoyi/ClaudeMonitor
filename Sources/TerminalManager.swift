@@ -69,7 +69,7 @@ enum TerminalManager {
             guard !ttyName.isEmpty else { continue }
 
             let check = shell("ps -t \(ttyName) -o pid= 2>/dev/null | while read pid; do lsof -a -p $pid -d cwd -Fn 2>/dev/null | grep '^n' | cut -c2-; done")
-            if check.contains(path) {
+            if check.range(of: path, options: .caseInsensitive) != nil {
                 let selectScript = """
                 tell application "iTerm2"
                     set w to item \(wIdx) of windows
@@ -125,7 +125,7 @@ enum TerminalManager {
             let target = String(parts[0]) // session:window
             let cwd = String(parts[1])
 
-            if cwd.contains(path) || cwd.hasSuffix(folderName) {
+            if cwd.range(of: path, options: .caseInsensitive) != nil || cwd.hasSuffix(folderName) {
                 shell("tmux select-window -t '\(target)' 2>/dev/null")
                 // Also bring the terminal app to front
                 if let frontTerminal = NSWorkspace.shared.runningApplications.first(where: {

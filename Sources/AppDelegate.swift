@@ -125,10 +125,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func registerSession(name: String, cwd: String, gifPath: String, isAuto: Bool) {
-        let exists = configStore.sessions.contains {
+        if let idx = configStore.sessions.firstIndex(where: {
             $0.cwdPattern.caseInsensitiveCompare(cwd) == .orderedSame
+        }) {
+            if isAuto && !configStore.sessions[idx].isAuto {
+                configStore.sessions[idx].isAuto = true
+                configStore.save()
+            }
+            return
         }
-        guard !exists else { return }
 
         var session = SessionConfig(
             name: name.isEmpty ? (cwd as NSString).lastPathComponent : name,

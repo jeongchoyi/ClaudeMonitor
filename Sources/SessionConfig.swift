@@ -110,18 +110,23 @@ struct SessionConfig: Codable, Identifiable {
     var cwdPattern: String
     var order: Int
     var isAuto: Bool
+    // Controlling tty (e.g. "ttys036") of this session's claude process. Unique
+    // per terminal pane, so it disambiguates two sessions in the same cwd. Empty
+    // for sessions registered by an older client — falls back to cwd matching.
+    var tty: String
 
-    init(name: String = "New Session", gifPath: String = "", cwdPattern: String = "", order: Int = 0, isAuto: Bool = false) {
+    init(name: String = "New Session", gifPath: String = "", cwdPattern: String = "", order: Int = 0, isAuto: Bool = false, tty: String = "") {
         self.id = UUID()
         self.name = name
         self.gifPath = gifPath
         self.cwdPattern = cwdPattern
         self.order = order
         self.isAuto = isAuto
+        self.tty = tty
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, gifPath, cwdPattern, order, isAuto
+        case id, name, gifPath, cwdPattern, order, isAuto, tty
     }
 
     init(from decoder: Decoder) throws {
@@ -132,6 +137,7 @@ struct SessionConfig: Codable, Identifiable {
         cwdPattern = try c.decode(String.self, forKey: .cwdPattern)
         order = try c.decode(Int.self, forKey: .order)
         isAuto = try c.decodeIfPresent(Bool.self, forKey: .isAuto) ?? false
+        tty = try c.decodeIfPresent(String.self, forKey: .tty) ?? ""
     }
 }
 

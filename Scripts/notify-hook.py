@@ -1,9 +1,24 @@
 #!/usr/bin/env python3
 import json
 import os
+import subprocess
 import sys
 import time
 import urllib.request
+
+
+def claude_tty() -> str:
+    # Controlling tty of the claude ancestor — unique per terminal pane, so the
+    # overlay can route the bubble to the right avatar even when two sessions
+    # share a cwd. Must be called while still a child of claude (before the
+    # detaching double-fork), since os.setsid() drops the controlling terminal.
+    helper = os.path.join(os.path.dirname(os.path.abspath(__file__)), "claude-tty.sh")
+    try:
+        return subprocess.run(
+            [helper], capture_output=True, text=True, timeout=3
+        ).stdout.strip()
+    except Exception:
+        return ""
 
 
 def read_input():
@@ -97,8 +112,8 @@ def wait_for_new_message(transcript_path: str, previous: str) -> str:
     return baseline
 
 
-def send_notification(cwd: str, message: str) -> None:
-    payload = json.dumps({"cwd": cwd, "message": message}).encode("utf-8")
+def send_notification(cwd: str, message: str, tty: str = "") -> None:
+    payload = json.dumps({"cwd": cwd, "message": message, "tty": tty}).encode("utf-8")
     req = urllib.request.Request(
         "http://localhost:9877/notify",
         data=payload,
@@ -114,10 +129,11 @@ def do_work(data: dict) -> None:
     event = data.get("hook_event_name", "")
     cwd = data.get("cwd") or os.getcwd()
     session_id = data.get("session_id", "") or ""
+    tty = data.get("_monitor_tty", "") or ""
 
     if event == "Notification":
         message = (data.get("message") or "").strip() or "done"
-        send_notification(cwd, message)
+        send_notification(cwd, message, tty)
         return
 
     cache_file = cache_path_for(session_id)
@@ -126,11 +142,15 @@ def do_work(data: dict) -> None:
     if latest:
         write_previous(cache_file, latest)
     message = truncate(latest) or "done"
-    send_notification(cwd, message)
+    send_notification(cwd, message, tty)
 
 
 def main():
     data = read_input()
+
+    # Capture the tty while we're still a direct child of claude — the detaching
+    # double-fork below calls os.setsid(), which drops the controlling terminal.
+    data["_monitor_tty"] = claude_tty()
 
     # Return immediately so the hook doesn't block Claude. The transcript is
     # flushed after Stop hooks return, so polling has to happen in a detached

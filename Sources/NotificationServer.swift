@@ -12,17 +12,18 @@ struct SessionNotification {
     let sessionPath: String
     let message: String
     let name: String?
+    let tty: String?
 }
 
 class NotificationServer {
 
     private let listener: NWListener
     private let onNotify: (SessionNotification) -> Void
-    private let onRegister: (String, String, String, Bool) -> Void // name, cwd, gifPath, isAuto
+    private let onRegister: (String, String, String, Bool, String) -> Void // name, cwd, gifPath, isAuto, tty
 
     init(port: UInt16,
          onNotify: @escaping (SessionNotification) -> Void,
-         onRegister: @escaping (String, String, String, Bool) -> Void)
+         onRegister: @escaping (String, String, String, Bool, String) -> Void)
     {
         self.onNotify = onNotify
         self.onRegister = onRegister
@@ -95,12 +96,13 @@ class NotificationServer {
             let cwd = json["cwd"] as? String ?? ""
             let gifPath = json["gifPath"] as? String ?? ""
             let isAuto = json["isAuto"] as? Bool ?? false
+            let tty = json["tty"] as? String ?? ""
             guard !cwd.isEmpty else {
                 return ("{\"error\":\"cwd required\"}", nil)
             }
             let safeName = name.replacingOccurrences(of: "\"", with: "'")
             return ("{\"status\":\"registered\",\"name\":\"\(safeName)\"}", {
-                self.onRegister(name, cwd, gifPath, isAuto)
+                self.onRegister(name, cwd, gifPath, isAuto, tty)
             })
 
         default:
@@ -115,6 +117,7 @@ class NotificationServer {
         let message = json["message"] as? String
             ?? (tool.isEmpty ? project : "\(project): \(tool)")
         let name = json["name"] as? String
-        return SessionNotification(sessionPath: sessionPath, message: message, name: name)
+        let tty = json["tty"] as? String
+        return SessionNotification(sessionPath: sessionPath, message: message, name: name, tty: tty)
     }
 }

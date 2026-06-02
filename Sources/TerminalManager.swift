@@ -11,7 +11,7 @@ enum TerminalManager {
 
     static var terminalApp: TerminalApp = .iterm2
 
-    static func activate(forPath path: String) {
+    static func activate(forPath path: String, tty: String = "") {
         if terminalApp == .tmux {
             activateTmuxSession(forPath: path)
             return
@@ -31,7 +31,7 @@ enum TerminalManager {
 
         switch terminalApp {
         case .iterm2:
-            activateITermTab(forPath: path)
+            activateITermTab(forTTY: tty, path: path)
         case .terminal:
             activateTerminalTab(forPath: path)
         default:
@@ -41,7 +41,9 @@ enum TerminalManager {
 
     // MARK: - iTerm2
 
-    private static func activateITermTab(forPath path: String) {
+    // Prefer an exact tty match (unique per pane). Fall back to resolving the
+    // tab by process cwd when no tty was captured at registration (legacy).
+    private static func activateITermTab(forTTY ttyTarget: String, path: String) {
         let listScript = """
         tell application "iTerm2"
             set output to ""
@@ -73,8 +75,17 @@ enum TerminalManager {
 
             guard !ttyName.isEmpty else { continue }
 
-            let check = shell("ps -t \(ttyName) -o pid= 2>/dev/null | while read pid; do lsof -a -p $pid -d cwd -Fn 2>/dev/null | grep '^n' | cut -c2-; done")
-            if check.range(of: path, options: .caseInsensitive) != nil {
+            let matched: Bool
+            if !ttyTarget.isEmpty {
+                matched = (ttyName == ttyTarget)
+            } else if !path.isEmpty {
+                let check = shell("ps -t \(ttyName) -o pid= 2>/dev/null | while read pid; do lsof -a -p $pid -d cwd -Fn 2>/dev/null | grep '^n' | cut -c2-; done")
+                matched = check.range(of: path, options: .caseInsensitive) != nil
+            } else {
+                matched = false
+            }
+
+            if matched {
                 let selectScript = """
                 tell application "iTerm2"
                     activate

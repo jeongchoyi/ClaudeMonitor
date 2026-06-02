@@ -9,7 +9,7 @@ import AppKit
 
 class CharacterView: NSView {
 
-    var onBubbleClicked: ((String) -> Void)?
+    var onBubbleClicked: ((String, String) -> Void)?
     var onRightClick: ((NSEvent) -> Void)?
 
     // Sessions
@@ -71,14 +71,25 @@ class CharacterView: NSView {
 
     var hasBubble: Bool { bubbleView != nil }
 
+    private var activeSessionTTY: String {
+        sessions.first { $0.id == activeSessionID }?.tty ?? ""
+    }
+
     func updateSessions(_ newSessions: [SessionConfig]) {
         sessions = newSessions
         reloadAvatars()
         needsDisplay = true
     }
 
-    func showBubble(message: String, sessionPath: String, name: String? = nil) {
-        let matched = sessions.first { !$0.cwdPattern.isEmpty && sessionPath.contains($0.cwdPattern) }
+    func showBubble(message: String, sessionPath: String, name: String? = nil, tty: String? = nil) {
+        // Prefer an exact tty match so the bubble lands on the right avatar even
+        // when two sessions share a cwd; fall back to cwd substring matching.
+        let matched: SessionConfig?
+        if let tty, !tty.isEmpty, let s = sessions.first(where: { $0.tty == tty }) {
+            matched = s
+        } else {
+            matched = sessions.first { !$0.cwdPattern.isEmpty && sessionPath.contains($0.cwdPattern) }
+        }
         activeSessionID = matched?.id ?? sessions.first?.id
         activeSessionPath = sessionPath
 
@@ -109,7 +120,7 @@ class CharacterView: NSView {
         bubble.tailX = cx - bubbleX
         bubble.onClick = { [weak self] in
             guard let self else { return }
-            self.onBubbleClicked?(self.activeSessionPath)
+            self.onBubbleClicked?(self.activeSessionPath, self.activeSessionTTY)
         }
 
         bubble.alphaValue = 0
@@ -469,7 +480,7 @@ class CharacterView: NSView {
 
         // 1) Bubble click → activate terminal + dismiss
         if let bubble = bubbleView, bubble.frame.contains(point) {
-            onBubbleClicked?(activeSessionPath)
+            onBubbleClicked?(activeSessionPath, activeSessionTTY)
             hideBubble()
             return
         }
@@ -481,7 +492,7 @@ class CharacterView: NSView {
             let dx = point.x - cx
             let dy = point.y - cy
             if sqrt(dx * dx + dy * dy) <= characterSize / 2 + 10 {
-                TerminalManager.activate(forPath: session.cwdPattern)
+                TerminalManager.activate(forPath: session.cwdPattern, tty: session.tty)
                 hideBubble()
                 return
             }

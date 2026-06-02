@@ -68,8 +68,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
         characterView.sizeScale = configStore.characterSize.scale
         characterView.mainColor = configStore.mainColor
-        characterView.onBubbleClicked = { [weak self] sessionPath in
-            TerminalManager.activate(forPath: sessionPath)
+        characterView.onBubbleClicked = { [weak self] sessionPath, tty in
+            TerminalManager.activate(forPath: sessionPath, tty: tty)
             self?.characterView.hideBubble()
         }
         TerminalManager.terminalApp = configStore.terminal
@@ -118,22 +118,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     self?.handleNotification(notification)
                 }
             },
-            onRegister: { [weak self] name, cwd, gifPath, isAuto in
+            onRegister: { [weak self] name, cwd, gifPath, isAuto, tty in
                 DispatchQueue.main.async {
-                    self?.registerSession(name: name, cwd: cwd, gifPath: gifPath, isAuto: isAuto)
+                    self?.registerSession(name: name, cwd: cwd, gifPath: gifPath, isAuto: isAuto, tty: tty)
                 }
             }
         )
     }
 
-    private func registerSession(name: String, cwd: String, gifPath: String, isAuto: Bool) {
-        if let idx = configStore.sessions.firstIndex(where: {
-            $0.cwdPattern.caseInsensitiveCompare(cwd) == .orderedSame
-        }) {
+    private func registerSession(name: String, cwd: String, gifPath: String, isAuto: Bool, tty: String) {
+        // Identity is the tty when we have one (unique per pane); otherwise fall
+        // back to cwd. A legacy session (empty tty) gets adopted by the first
+        // tty-bearing registration for the same cwd; a second session in that
+        // same cwd then no longer matches and becomes its own avatar.
+        let idx = configStore.sessions.firstIndex {
+            (!tty.isEmpty && $0.tty == tty) ||
+            ($0.tty.isEmpty && $0.cwdPattern.caseInsensitiveCompare(cwd) == .orderedSame)
+        }
+        if let idx {
+            var changed = false
+            if !tty.isEmpty && configStore.sessions[idx].tty != tty {
+                configStore.sessions[idx].tty = tty
+                changed = true
+            }
+            if configStore.sessions[idx].cwdPattern != cwd {
+                configStore.sessions[idx].cwdPattern = cwd
+                changed = true
+            }
             if isAuto && !configStore.sessions[idx].isAuto {
                 configStore.sessions[idx].isAuto = true
-                configStore.save()
+                changed = true
             }
+            if changed { configStore.save() }
             return
         }
 
@@ -141,7 +157,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             name: name.isEmpty ? (cwd as NSString).lastPathComponent : name,
             cwdPattern: cwd,
             order: configStore.sessions.count,
-            isAuto: isAuto
+            isAuto: isAuto,
+            tty: tty
         )
         if !gifPath.isEmpty { session.gifPath = gifPath }
         configStore.sessions.append(session)
@@ -155,7 +172,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         characterView.showBubble(
             message: notification.message,
             sessionPath: notification.sessionPath,
-            name: notification.name
+            name: notification.name,
+            tty: notification.tty
         )
         NSSound(named: NSSound.Name("Pop"))?.play()
     }
@@ -230,10 +248,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
         let activeCWDs = output.split(separator: "\n").map(String.init)
 
+        // ttys currently hosting a claude process (for sessions keyed by tty).
+        let ttyOut = TerminalManager.shell(
+            "ps -eo tty,comm 2>/dev/null | awk '/claude/{print $1}'"
+        )
+        let activeTTYs = Set(
+            ttyOut.split(separator: "\n").map {
+                String($0).trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "/dev/", with: "")
+            }
+        )
+
         var changed = false
         for session in autoSessions {
-            let alive = activeCWDs.contains {
-                $0.caseInsensitiveCompare(session.cwdPattern) == .orderedSame
+            let alive: Bool
+            if !session.tty.isEmpty {
+                alive = activeTTYs.contains(session.tty)
+            } else {
+                alive = activeCWDs.contains {
+                    $0.caseInsensitiveCompare(session.cwdPattern) == .orderedSame
+                }
             }
             if !alive {
                 configStore.sessions.removeAll { $0.id == session.id }
